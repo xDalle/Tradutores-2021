@@ -1,14 +1,15 @@
 Autor: Lucas Dalle Rocha
-MatrÌcula: 17/0016641
 
-O programa pode ser compilado pela utilizaÁ„o do Makefile, 
+Matr√≠cula: 17/0016641
+
+O programa pode ser compilado pela utiliza√ß√£o do Makefile, 
 com o seguinte comando em seu terminal: 
 $ make
 	
-Caso seja de seu interesse compil·-lo manualmente, execute a instruÁ„o:
+Caso seja de seu interesse compil√°-lo manualmente, execute a instru√ß√£o:
 $ flex src/lexical.l && gcc-11 -o tradutor src/main.c
 
-Por fim, para execuÁ„o do analisador lÈxico nos arquivos teste:
+Por fim, para execu√ß√£o do analisador l√©xico nos arquivos teste:
 $ ./tradutor tests/<file>.c
 
 Requisitos:
