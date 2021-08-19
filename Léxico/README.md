@@ -7,9 +7,11 @@ com o seguinte comando em seu terminal:
 $ make
 	
 Caso seja de seu interesse compilá-lo manualmente, execute a instrução:
+
 $ flex src/lexical.l && gcc-11 -o tradutor src/main.c
 
 Por fim, para execução do analisador léxico nos arquivos teste:
+
 $ ./tradutor tests/<file>.c
 
 Requisitos:
