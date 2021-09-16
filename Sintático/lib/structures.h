@@ -3,10 +3,11 @@
 #define MAX_CHILDREN 4
 
 typedef struct Symbol{
-    //char name[100];   //strcpy
-    //char type[100];   //strcpy
-    char *name;         //strdup
-    char *type;         //strdup
+    char name[100];   //strcpy
+    char type[10];   //strcpy
+    //char *name;         //strdup
+    //char *type;         //strdup
+    int decl_type;      // 0 = function, 1 = variable
     int line;
     int column;
     int scope;
@@ -18,7 +19,7 @@ typedef struct Table{
     Symbol *last;
 }Table;
 
-void insertSymbol(Table *t, char *name, char *type, int line, int column, int scope);
+void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope);
 void freeSymbols(Table *t);
 void printTable(Table *t);
 int isOnTable(Table *t, char *name);
@@ -27,6 +28,8 @@ static Table symbolTable;
 typedef struct Ast{
     char *node_name;
     char *token_name;
+    int printable;
+    //int has_token;
     struct Ast *children[MAX_CHILDREN];
     struct Ast *prox;
 }Ast;
@@ -37,7 +40,7 @@ typedef struct AstList{
 }AstList;
 
 AstList *createAstList();
-Ast *createAstNode(char *name);
+Ast *createAstNode(char *name, int printable);
 
 void insertAstNode(AstList *t, Ast *n);
 void freeNode(Ast *n);

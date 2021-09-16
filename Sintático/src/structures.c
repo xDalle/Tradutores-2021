@@ -10,12 +10,13 @@
 
 /* SYMBOL TABLE */
 
-void insertSymbol(Table *t, char *name, char *type, int line, int column, int scope){
+void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope){
     Symbol *new_symbol = (Symbol*)malloc(sizeof(Symbol));
-    new_symbol->name = strdup(name);
-    //strcpy(new_symbol->name, name);
-    new_symbol->type = strdup(type);
-    //strcpy(new_symbol->type, type);
+    //new_symbol->name = strdup(name);
+    strcpy(new_symbol->name, name);
+    //new_symbol->type = strdup(type);
+    strcpy(new_symbol->type, type);
+    new_symbol->decl_type = decl_type;
     new_symbol->line = line;
     new_symbol->column = column;
     new_symbol->scope = scope;
@@ -32,10 +33,10 @@ void freeSymbols(Table *t){
     while(t->first != NULL){
         Symbol *removed = t->first;
         t->first = t->first->prox;
-        if(removed->name != NULL)
-            free(removed->name);
-        else if(removed->type != NULL)
-            free(removed->type);
+        //if(removed->name != NULL)
+        //    free(removed->name);
+        //else if(removed->type != NULL)
+        //    free(removed->type);
         free(removed);
     }
     t->last = NULL;
@@ -54,10 +55,10 @@ int isOnTable(Table *t, char *name){
 
 void printTable(Table *t){
     printf("\n\t\t\t\t\t\t%sSymbol Table%s\n", GREEN, WHITE);
-    printf(" ------------------------------------------------------------------------------------------------------------------ \n");
-    printf("| %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s |\n", RED ,"Name", WHITE, 
-    RED, "Type", WHITE, RED, "Line", WHITE, RED, "Column", WHITE, RED, "Scope", WHITE);
-    printf(" ------------------------------------------------------------------------------------------------------------------ \n");
+    printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
+    printf("| %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s |\n", RED ,"Name", WHITE, 
+    RED, "Type", WHITE, RED, "Declaration Type", WHITE, RED, "Line", WHITE, RED, "Column", WHITE, RED, "Scope", WHITE);
+    printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
     Symbol *actual = t->first;
     int getScope;
     int biggestScope = -1;
@@ -73,10 +74,13 @@ void printTable(Table *t){
     }
     actual = t->first;
     while(actual != NULL){
-        printf("| %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, actual->line, actual->column, actual->scope);
+        if(actual->decl_type)
+            printf("| %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "variable", actual->line, actual->column, actual->scope);
+        else
+            printf("| %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "function", actual->line, actual->column, actual->scope);
         actual = actual->prox;
     }
-    printf(" ------------------------------------------------------------------------------------------------------------------ \n");
+    printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
 }
 
 /* AST */
@@ -88,10 +92,13 @@ AstList *createAstList(){
     return ast_list;
 }
 
-Ast *createAstNode(char *name){
+Ast *createAstNode(char *name, int printable){
     Ast *new_ast_node = (Ast*)malloc(sizeof(Ast));
     new_ast_node->node_name = strdup(name);
+    //strcpy(new_ast_node->node_name, name);
     new_ast_node->token_name = NULL;
+    new_ast_node->printable = printable;
+    //new_ast_node->has_token = 0;
     //strcpy(ast->node_name, name);
     new_ast_node->children[0] = NULL;
     new_ast_node->children[1] = NULL;
@@ -183,19 +190,22 @@ void printNode(Ast *n, int index){
         return;
     }
 
-    for(i = 0; i < index; i++){
-        printf("   ");
-        spaces+= 3;
+    if(n->printable){
+        for(i = 0; i < index; i++){
+            printf("   ");
+            spaces+= 3;
+        }
+        printf(" %s├─%s %s\n", GREEN, WHITE, n->node_name);
+        index+= 1;
     }
-    printf(" %s├─%s %s\n", GREEN, WHITE, n->node_name);
-    
+
     for(i = 0; i < MAX_CHILDREN; i++){
         if(n->children[i] != NULL){
-            printNode(n->children[i], index+1);
+            printNode(n->children[i], index);
         }
     }
 
-    if(n->token_name != NULL){
+    if(n->token_name){
         for(i = 0; i < spaces+3; i++){
             printf(" ");
         }
