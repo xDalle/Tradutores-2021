@@ -3130,7 +3130,7 @@ int main(int argc, char *argv[]){
 	if(count_errors == 0){
 		printf("%sSyntax analysis finished without errors.%s\n", GREEN, WHITE);
 	}else{
-		printf("%sSyntax analysis finished with errors.%s\n", RED, WHITE);
+		printf("%sSyntax analysis finished with %d errors.%s\n", RED, count_errors, WHITE);
 	}
 	return 0;
 }
