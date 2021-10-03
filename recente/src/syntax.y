@@ -782,7 +782,7 @@ void yyerror(const char *error_msg){
 
 
 int main(int argc, char *argv[]){
-	startContext(&contextList);
+	setupContext(&contextList);
 	
 	if(argc == 2){
 		FILE *fp = fopen(argv[1], "r");

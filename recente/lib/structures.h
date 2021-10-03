@@ -4,7 +4,7 @@
 
 typedef struct Symbol{
     char name[100];   //strcpy
-    char type[10];   //strcpy
+    char type[15];   //strcpy
     //char *name;         //strdup
     //char *type;         //strdup
     int decl_type;      // 0 = function, 1 = variable
@@ -64,8 +64,7 @@ typedef struct Context{
 
 void insertScope(int value, Context *c);
 int removeScope(Context *c);
-int isContextEmpty(Context *c);
-void startContext(Context *c);
+void setupContext(Context *c);
 void freeContextList(Context *c);
 
 char *getType(Table *t, Context *c, char *name, int scope);

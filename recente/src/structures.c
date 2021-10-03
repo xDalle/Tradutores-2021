@@ -204,13 +204,14 @@ void printNode(Ast *n, int index){
         printf(" %s├─%s %s %s[%d:%d] %s\n", RED, WHITE, n->token_name, PURPLE, n->token_line, n->token_column, WHITE);
     }
 }
-
 /*
 void checkType(Ast *n, int *error){
-    if(strcmp(n->token_name, "return stmt") == 0)
-        alt = 1;
-    else if(strcmp(n->token_name, "assign exp") == 0)
-        alt = 2;
+    if(strcmp(n->token_name, "return stmt") == 0){
+        strcpy(n->token_type,);
+    }else if(strcmp(n->token_name, "assign exp") == 0){
+
+    }
+        
 }*/
 
 /* SCOPE */
@@ -239,14 +240,7 @@ int removeScope(Context *c){
     return tmp;
 }
 
-int isContextEmpty(Context *c){
-    if(c->first == NULL){
-       return 1;
-    }
-    return 0;
-}
-
-void startContext(Context *c){
+void setupContext(Context *c){
     insertScope(0, c);
 }
 
