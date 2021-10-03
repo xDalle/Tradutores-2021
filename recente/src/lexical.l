@@ -6,7 +6,7 @@
     #include <stdlib.h>
 	#include <string.h>
 	#include "../lib/syntax.tab.h"
-
+	#include "../lib/structures.h"
 	#define ERROR -1
 	#define RED "\x1b[31m"
 	#define WHITE "\x1b[0m"
@@ -16,8 +16,10 @@
 	int num_chars = 1;
 	int multiline_height = 0;
 	int multiline_start;
-	static int actual_scope = 0;
-	static int last_scope = 0;
+	int last_scope = 0;
+	int func_context = 0;
+	extern Context contextList;
+
 	void updateLine();
 	void updateColumn(int token_length);
 	void printLexeme(char *token_id, char *token_text);
@@ -85,8 +87,11 @@ operator_overload		"!"
 {brace_opening}			{
 							//printLexeme("Opening brace", yytext);
 							setupLexeme(yytext);
-							actual_scope+= 1;
-							last_scope+= 1;
+							if(func_context)
+								insertScope(last_scope, &contextList);
+							else
+								insertScope(++last_scope, &contextList);
+							func_context = 0;
 							updateColumn(yyleng);
 							return '{';
 						}
@@ -94,7 +99,7 @@ operator_overload		"!"
 {brace_closing}			{
 							//printLexeme("Closing brace", yytext);
 							setupLexeme(yytext);
-							actual_scope-= 1;
+							removeScope(&contextList);
 							updateColumn(yyleng);
 							return '}';
 						}
@@ -166,6 +171,7 @@ operator_overload		"!"
 {id} 					{
 							//printLexeme("Identifier", yytext);
 							setupLexeme(yytext);
+							yylval.lexeme.scope = contextList.first->value;
 							updateColumn(yyleng);
 							return ID;
 						}
@@ -323,7 +329,6 @@ void setupLexeme(char *token_text){
 	yylval.lexeme.line = num_lines;
 	yylval.lexeme.column = num_chars;
 	yylval.lexeme.length = yyleng;
-	yylval.lexeme.scope = actual_scope;
 }
 
 /*

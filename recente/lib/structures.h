@@ -19,16 +19,20 @@ typedef struct Table{
     Symbol *last;
 }Table;
 
-void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope);
+void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope, int *errors);
 void freeSymbols(Table *t);
 void printTable(Table *t);
-int isOnTable(Table *t, char *name);
-static Table symbolTable;
+int isOnTable(Table *t, char *name, int scope);
+int hasMainFunction(Table *t);
+int checkDuplicatedSymbol(Table *t, char *name, int scope);
 
 typedef struct Ast{
     char *node_name;
     char *token_name;
+    char *token_type;
     int printable;
+    int token_line;
+    int token_column;
     //int has_token;
     struct Ast *children[MAX_CHILDREN];
     struct Ast *prox;
@@ -44,12 +48,27 @@ Ast *createAstNode(char *name, int printable);
 
 void insertAstNode(AstList *t, Ast *n);
 void freeNode(Ast *n);
-void freeAst(AstList *t);
 void printAstList(AstList *t);
 void printAST(Ast *root);
 void printNode(Ast *n, int index);
 
-static Ast root;
-static AstList astList;
+typedef struct Scope{
+    int value;
+    struct Scope *prox;
+}Scope;
+
+typedef struct Context{
+    Scope *first;
+    Scope *last;
+}Context;
+
+void insertScope(int value, Context *c);
+int removeScope(Context *c);
+int isContextEmpty(Context *c);
+void startContext(Context *c);
+void freeContextList(Context *c);
+
+char *getType(Table *t, Context *c, char *name, int scope);
+char *getContext(Table *t, Context *c, char *name, int line, int column, int *error);
 
 #endif

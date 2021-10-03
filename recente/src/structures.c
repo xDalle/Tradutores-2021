@@ -6,11 +6,34 @@
 #define RED "\x1b[31m"
 #define WHITE "\x1b[0m"
 #define GREEN "\x1b[32m"
+#define PURPLE "\x1b[35m"
+
 #define MAX_CHILDREN 4
 
+Ast root;
+AstList astList;
+Table symbolTable;
+Context contextList;
 /* SYMBOL TABLE */
 
-void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope){
+int isOnTable(Table *t, char *name, int scope){
+    Symbol *actual = t->first;
+    while(actual != NULL){
+        if(strcmp(actual->name, name) == 0 && actual->scope == scope){
+            return 1;
+        }
+        actual = actual->prox;
+    }
+    return 0;
+}
+
+void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope, int *errors){
+    if(isOnTable(t, name, scope)){
+        printf("%sLine:%d\tColumn:%d\tSemantic error! Redeclaration of variable %s%s%s in the same scope.%s\n", RED, line, column, PURPLE, name, RED, WHITE);
+        *errors+= 1;
+        //return;
+    }
+
     Symbol *new_symbol = (Symbol*)malloc(sizeof(Symbol));
     //new_symbol->name = strdup(name);
     strcpy(new_symbol->name, name);
@@ -42,17 +65,6 @@ void freeSymbols(Table *t){
     t->last = NULL;
 }
 
-int isOnTable(Table *t, char *name){
-    Symbol *actual = t->first;
-    while(actual != NULL){
-        if(!strcmp(actual->name, name)){
-            return actual->scope;
-        }
-        actual = actual->prox;
-    }
-    return -1;
-}
-
 void printTable(Table *t){
     printf("\n\t\t\t\t\t\t%sSymbol Table%s\n", GREEN, WHITE);
     printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
@@ -60,19 +72,6 @@ void printTable(Table *t){
     RED, "Type", WHITE, RED, "Declaration Type", WHITE, RED, "Line", WHITE, RED, "Column", WHITE, RED, "Scope", WHITE);
     printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
     Symbol *actual = t->first;
-    int getScope;
-    int biggestScope = -1;
-    while(actual != NULL){
-        getScope = isOnTable(t, actual->name);
-        if(biggestScope < getScope){
-            biggestScope = getScope;
-        }
-        if(getScope == -1){  // mesmo símbolo no mesmo escopo...
-            actual->scope = biggestScope;
-        }
-        actual = actual->prox;
-    }
-    actual = t->first;
     while(actual != NULL){
         if(actual->decl_type)
             printf("| %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "variable", actual->line, actual->column, actual->scope);
@@ -83,6 +82,18 @@ void printTable(Table *t){
     printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
 }
 
+int hasMainFunction(Table *t){
+    int has_main = 0;
+    Symbol *actual = t->first;
+    while(actual != NULL){
+        if(actual->decl_type == 0 && strcmp(actual->name, "main") == 0){    // function called main
+            has_main = 1;
+            break;
+        }
+        actual = actual->prox;
+    }
+    return has_main;
+}
 /* AST */
 
 AstList *createAstList(){
@@ -97,7 +108,9 @@ Ast *createAstNode(char *name, int printable){
     new_ast_node->node_name = strdup(name);
     //strcpy(new_ast_node->node_name, name);
     new_ast_node->token_name = NULL;
+    new_ast_node->token_type = NULL;
     new_ast_node->printable = printable;
+    new_ast_node->token_line = new_ast_node->token_column = -1;
     //new_ast_node->has_token = 0;
     //strcpy(ast->node_name, name);
     new_ast_node->children[0] = NULL;
@@ -133,36 +146,12 @@ void freeNode(Ast *n){
         free(n->token_name);
     }
 
+    if(n->token_type != NULL){
+        free(n->token_type);
+    }
+    
     if(n->prox != NULL)
         free(n->prox);
-}
-
-void freeAst(AstList *t){
-    Ast *actual = t->first;
-    while(actual != NULL){
-        if(actual->node_name != NULL)
-            free(actual->node_name);
-        else if(actual->token_name != NULL)
-            free(actual->token_name);
-        freeNode(actual);
-        actual = actual->prox;
-    }
-
-    // int i;
-    // Ast *actual = t->first;
-    // while(actual != NULL){
-    //     Ast *removed = t->first;
-    //     // free(removed->symbol);
-    //     for(i = 0; i < MAX_CHILDREN; i++){
-    //         free(removed->children[i]);
-    //     }
-    //     t->first = t->first->prox;
-    //     // free(removed->prox);
-    //     free(removed);
-    //     actual = actual->prox;
-    // }
-    // // free(actual);
-    // // t->last = NULL;
 }
 
 void printAstList(AstList *t){
@@ -195,7 +184,10 @@ void printNode(Ast *n, int index){
             printf("   ");
             spaces+= 3;
         }
-        printf(" %s├─%s %s\n", GREEN, WHITE, n->node_name);
+        printf(" %s├─%s %s", GREEN, WHITE, n->node_name);
+        if(n->token_name && n->token_line == -1)
+            printf(" [%s%s%s]", RED, n->token_name, WHITE);
+        printf("\n");
         index+= 1;
     }
 
@@ -205,10 +197,90 @@ void printNode(Ast *n, int index){
         }
     }
 
-    if(n->token_name){
+    if(n->token_name && n->token_line != -1){
         for(i = 0; i < spaces+3; i++){
             printf(" ");
         }
-        printf(" %s├─%s %s\n", RED, WHITE, n->token_name);
+        printf(" %s├─%s %s %s[%d:%d] %s\n", RED, WHITE, n->token_name, PURPLE, n->token_line, n->token_column, WHITE);
     }
+}
+
+/*
+void checkType(Ast *n, int *error){
+    if(strcmp(n->token_name, "return stmt") == 0)
+        alt = 1;
+    else if(strcmp(n->token_name, "assign exp") == 0)
+        alt = 2;
+}*/
+
+/* SCOPE */
+
+void insertScope(int value, Context *c){
+    Scope *new_scope = (Scope *)malloc(sizeof(Scope));
+    new_scope->value = value;
+    new_scope->prox = c->first;
+    c->first = new_scope;
+    if(c->last == NULL){ //l->inicio->proximo == NULL ou novoprimeiro->proximo == NULL
+        c->last = c->first;
+    }
+}
+
+int removeScope(Context *c){
+    if(c->first == NULL){
+        return -1;
+    }
+    int tmp = c->first->value;
+    Scope *removed = c->first;
+    c->first = c->first->prox;
+    free(removed);
+    if(c->first == NULL){
+        c->last = NULL;
+    }     
+    return tmp;
+}
+
+int isContextEmpty(Context *c){
+    if(c->first == NULL){
+       return 1;
+    }
+    return 0;
+}
+
+void startContext(Context *c){
+    insertScope(0, c);
+}
+
+void freeContextList(Context *c){
+    while(c->first != NULL){
+        removeScope(c);
+    }
+}
+
+/* General */
+
+char *getType(Table *t, Context *c, char *name, int scope){
+    Symbol *actual = t->first;
+    while(actual != NULL){
+        if(strcmp(actual->name, name) == 0 && actual->scope == scope){
+            return actual->type;
+        }
+        actual = actual->prox;
+    }
+    return "error";
+}
+
+char *getContext(Table *t, Context *c, char *name, int line, int column, int *error){
+    Scope *actual = c->first;
+    while(actual != NULL){
+        if(isOnTable(t, name, actual->value)){
+            return getType(t, c, name, actual->value);
+        }
+        actual = actual->prox;
+    }
+
+    printf("%sLine:%d\tColumn:%d\tSemantic error! Variable %s%s%s was not declared in this scope.%s\n", 
+	RED, line, column, PURPLE, name, RED, WHITE);
+    *error+= 1;
+
+    return "error";
 }

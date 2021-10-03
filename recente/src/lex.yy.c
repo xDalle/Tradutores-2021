@@ -515,7 +515,7 @@ char *yytext;
     #include <stdlib.h>
 	#include <string.h>
 	#include "../lib/syntax.tab.h"
-
+	#include "../lib/structures.h"
 	#define ERROR -1
 	#define RED "\x1b[31m"
 	#define WHITE "\x1b[0m"
@@ -525,17 +525,19 @@ char *yytext;
 	int num_chars = 1;
 	int multiline_height = 0;
 	int multiline_start;
-	static int actual_scope = 0;
-	static int last_scope = 0;
+	int last_scope = 0;
+	int func_context = 0;
+	extern Context contextList;
+
 	void updateLine();
 	void updateColumn(int token_length);
 	void printLexeme(char *token_id, char *token_text);
 	void setupLexeme(char *token_text);
 	int printCharacterError(char *token_id, char *token_text);
 	void printMultilineError(int multiline_line, int multiline_column);
-#line 537 "src/lex.yy.c"
-
 #line 539 "src/lex.yy.c"
+
+#line 541 "src/lex.yy.c"
 
 #define INITIAL 0
 #define comment 1
@@ -751,10 +753,10 @@ YY_DECL
 		}
 
 	{
-#line 63 "src/lexical.l"
+#line 65 "src/lexical.l"
 
 
-#line 758 "src/lex.yy.c"
+#line 760 "src/lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -813,44 +815,44 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 65 "src/lexical.l"
+#line 67 "src/lexical.l"
 {BEGIN(comment); multiline_start = num_chars; num_chars+=yyleng;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 67 "src/lexical.l"
+#line 69 "src/lexical.l"
 {}					/* ignora qualquer coisa que não seja '*' */
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 68 "src/lexical.l"
+#line 70 "src/lexical.l"
 {}					/* ignora '*' não seguido por '/' */
 	YY_BREAK
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 69 "src/lexical.l"
+#line 71 "src/lexical.l"
 {updateLine(); multiline_height+= 1;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 70 "src/lexical.l"
+#line 72 "src/lexical.l"
 {BEGIN(INITIAL); multiline_height = 0;}
 	YY_BREAK
 case YY_STATE_EOF(comment):
-#line 71 "src/lexical.l"
+#line 73 "src/lexical.l"
 {printMultilineError(num_lines - multiline_height, multiline_start); return ERROR_COMM;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 73 "src/lexical.l"
+#line 75 "src/lexical.l"
 {
 							updateColumn(yyleng);
 						}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 77 "src/lexical.l"
+#line 79 "src/lexical.l"
 {	
 							updateColumn(yyleng);
 						}
@@ -858,37 +860,40 @@ YY_RULE_SETUP
 case 8:
 /* rule 8 can match eol */
 YY_RULE_SETUP
-#line 81 "src/lexical.l"
+#line 83 "src/lexical.l"
 {
 							updateLine();
 						}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 85 "src/lexical.l"
+#line 87 "src/lexical.l"
 {
 							//printLexeme("Opening brace", yytext);
 							setupLexeme(yytext);
-							actual_scope+= 1;
-							last_scope+= 1;
+							if(func_context)
+								insertScope(last_scope, &contextList);
+							else
+								insertScope(++last_scope, &contextList);
+							func_context = 0;
 							updateColumn(yyleng);
 							return '{';
 						}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 94 "src/lexical.l"
+#line 99 "src/lexical.l"
 {
 							//printLexeme("Closing brace", yytext);
 							setupLexeme(yytext);
-							actual_scope-= 1;
+							removeScope(&contextList);
 							updateColumn(yyleng);
 							return '}';
 						}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 102 "src/lexical.l"
+#line 107 "src/lexical.l"
 {
 							//printLexeme("Opening parenthese", yytext);
 							setupLexeme(yytext);
@@ -898,7 +903,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 109 "src/lexical.l"
+#line 114 "src/lexical.l"
 {
 							//printLexeme("Closing parenthese", yytext);
 							setupLexeme(yytext);
@@ -908,7 +913,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 116 "src/lexical.l"
+#line 121 "src/lexical.l"
 {
 							//printLexeme("Reserved keyword", yytext);
 							setupLexeme(yytext);
@@ -926,7 +931,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 131 "src/lexical.l"
+#line 136 "src/lexical.l"
 {
 							//printLexeme("Data type", yytext);
 							setupLexeme(yytext);
@@ -936,7 +941,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 138 "src/lexical.l"
+#line 143 "src/lexical.l"
 {
 							//printLexeme("Compound data type", yytext);
 							setupLexeme(yytext);
@@ -946,7 +951,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 145 "src/lexical.l"
+#line 150 "src/lexical.l"
 {
 							//printLexeme("Nil constant", yytext);
 							setupLexeme(yytext);
@@ -956,7 +961,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 152 "src/lexical.l"
+#line 157 "src/lexical.l"
 {
 							//printLexeme("Input command", yytext);
 							setupLexeme(yytext);
@@ -966,7 +971,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 159 "src/lexical.l"
+#line 164 "src/lexical.l"
 {
 							//printLexeme("Output command", yytext);
 							setupLexeme(yytext);
@@ -976,17 +981,18 @@ YY_RULE_SETUP
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 166 "src/lexical.l"
+#line 171 "src/lexical.l"
 {
 							//printLexeme("Identifier", yytext);
 							setupLexeme(yytext);
+							yylval.lexeme.scope = contextList.first->value;
 							updateColumn(yyleng);
 							return ID;
 						}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 173 "src/lexical.l"
+#line 179 "src/lexical.l"
 {
 							//printLexeme("Integer number", yytext);
 							setupLexeme(yytext);
@@ -996,7 +1002,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 180 "src/lexical.l"
+#line 186 "src/lexical.l"
 {
 							//printLexeme("Real number", yytext);
 							setupLexeme(yytext);
@@ -1006,7 +1012,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 187 "src/lexical.l"
+#line 193 "src/lexical.l"
 {
 							//printLexeme("List constructor", yytext);
 							setupLexeme(yytext);
@@ -1016,7 +1022,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 194 "src/lexical.l"
+#line 200 "src/lexical.l"
 {
 							//printLexeme("List operator", yytext);
 							setupLexeme(yytext);
@@ -1026,7 +1032,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 201 "src/lexical.l"
+#line 207 "src/lexical.l"
 {
 							//printLexeme("List destructor", yytext);
 							setupLexeme(yytext);
@@ -1036,7 +1042,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 208 "src/lexical.l"
+#line 214 "src/lexical.l"
 {
 							//printLexeme("List function", yytext);
 							setupLexeme(yytext);
@@ -1046,7 +1052,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 215 "src/lexical.l"
+#line 221 "src/lexical.l"
 {
 							//printLexeme("Arithmetic operator (mul/div)", yytext);
 							setupLexeme(yytext);
@@ -1056,7 +1062,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 222 "src/lexical.l"
+#line 228 "src/lexical.l"
 {
 							//printLexeme("Arithmetic operator (add/sub)", yytext);
 							setupLexeme(yytext);
@@ -1066,7 +1072,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 229 "src/lexical.l"
+#line 235 "src/lexical.l"
 {
 							//printLexeme("Relational operator", yytext);
 							setupLexeme(yytext);
@@ -1076,7 +1082,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 236 "src/lexical.l"
+#line 242 "src/lexical.l"
 {
 							//printLexeme("Logical operator", yytext);
 							setupLexeme(yytext);
@@ -1089,7 +1095,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 246 "src/lexical.l"
+#line 252 "src/lexical.l"
 {
 							//printLexeme("Assignment", yytext);
 							setupLexeme(yytext);
@@ -1099,7 +1105,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 253 "src/lexical.l"
+#line 259 "src/lexical.l"
 {
 							//printLexeme("Comma", yytext);
 							setupLexeme(yytext);
@@ -1109,7 +1115,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 260 "src/lexical.l"
+#line 266 "src/lexical.l"
 {
 							//printLexeme("Semicolon", yytext);
 							setupLexeme(yytext);
@@ -1119,7 +1125,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 267 "src/lexical.l"
+#line 273 "src/lexical.l"
 {
 							//printLexeme("String literal", yytext);
 							setupLexeme(yytext);
@@ -1129,7 +1135,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 274 "src/lexical.l"
+#line 280 "src/lexical.l"
 {
 							//printLexeme("Logical or list related operator", yytext);
 							setupLexeme(yytext);
@@ -1139,7 +1145,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 281 "src/lexical.l"
+#line 287 "src/lexical.l"
 {
 							if(printCharacterError("Unrecognized character", yytext) == -1)	// Caso aspas dupla
 								return ERROR_STR;
@@ -1149,10 +1155,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 288 "src/lexical.l"
+#line 294 "src/lexical.l"
 ECHO;
 	YY_BREAK
-#line 1156 "src/lex.yy.c"
+#line 1162 "src/lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2120,7 +2126,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 288 "src/lexical.l"
+#line 294 "src/lexical.l"
 
 
 void updateLine(){
@@ -2159,7 +2165,6 @@ void setupLexeme(char *token_text){
 	yylval.lexeme.line = num_lines;
 	yylval.lexeme.column = num_chars;
 	yylval.lexeme.length = yyleng;
-	yylval.lexeme.scope = actual_scope;
 }
 
 /*
