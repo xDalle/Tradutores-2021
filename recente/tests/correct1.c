@@ -1,3 +1,5 @@
+int call(){}
+
 int a (float b, int c){
 	int x;
 	x = 4;
@@ -11,6 +13,10 @@ int a (float b, int c){
 	}
 	x = -9.6316;
 	x = NIL;
-	call();
-	int b;
+    call();
+    int b;
+	if(a == c){
+		int x;
+		x = 4;
+	}
 }

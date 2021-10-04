@@ -2,11 +2,12 @@
 #define H_STRUCTURES
 #define MAX_CHILDREN 4
 
+/* Symbol Table */
 typedef struct Symbol{
-    char name[100];   //strcpy
-    char type[15];   //strcpy
-    //char *name;         //strdup
-    //char *type;         //strdup
+    char *name;         //strdup
+    char *type;         //strdup
+    struct ParameterList *param_list;
+    int param_qtd;
     int decl_type;      // 0 = function, 1 = variable
     int line;
     int column;
@@ -26,14 +27,16 @@ int isOnTable(Table *t, char *name, int scope);
 int hasMainFunction(Table *t);
 int checkDuplicatedSymbol(Table *t, char *name, int scope);
 
+/* AST tree */
 typedef struct Ast{
     char *node_name;
+    char *node_type;
+    char *node_transform;
     char *token_name;
     char *token_type;
     int printable;
     int token_line;
     int token_column;
-    //int has_token;
     struct Ast *children[MAX_CHILDREN];
     struct Ast *prox;
 }Ast;
@@ -52,6 +55,7 @@ void printAstList(AstList *t);
 void printAST(Ast *root);
 void printNode(Ast *n, int index);
 
+/* Scope (context) list */
 typedef struct Scope{
     int value;
     struct Scope *prox;
@@ -63,11 +67,32 @@ typedef struct Context{
 }Context;
 
 void insertScope(int value, Context *c);
-int removeScope(Context *c);
+void removeScope(Context *c);
 void setupContext(Context *c);
 void freeContextList(Context *c);
 
+/* Parameter list */
+typedef struct Parameter{
+    char param_type[15];    //int, int list, float, float list
+    struct Parameter *prox;
+}Parameter;
+
+typedef struct ParameterList{
+    Parameter *first;
+    Parameter *last;
+}ParameterList;
+
+ParameterList *createParameterList();
+void insertParam(char *param_type, ParameterList *p);
+void freeParamList(ParameterList *p);
+void setupParameters(Table *t);
+void printParamList(ParameterList *p);
+void printParams(Table *t);
+
+/* General */
 char *getType(Table *t, Context *c, char *name, int scope);
 char *getContext(Table *t, Context *c, char *name, int line, int column, int *error);
+//void checkType(Ast *n, int line, int column, int *error);
+//void verifyExpressionType(Ast *n);
 
 #endif

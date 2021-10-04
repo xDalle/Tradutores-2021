@@ -26,6 +26,7 @@
 	extern int func_context;
 	static int syntax_errors = 0;
 	static int semantic_errors = 0;
+	int check_func_type = 0;
 	extern Ast root;
 	extern AstList astList;
 	extern Table symbolTable;
@@ -123,7 +124,9 @@
 
 initial:
 	declaration_list{
-		root = *createAstNode("initial", DEBUG_AST);	// non-printable
+		//root = *createAstNode("initial", DEBUG_AST);	// non-printable
+		root.node_name = strdup("initial");
+		root.printable = DEBUG_AST;
 		$$ = &root;
 		$$->children[0] = $1;
 		insertAstNode(&astList, $$);
@@ -155,6 +158,10 @@ decl:
 		$$->children[0] = $1;
 		insertAstNode(&astList, $$);
 	}
+	| ';'{
+		$$ = createAstNode("decl", DEBUG_AST);
+		insertAstNode(&astList, $$);
+	}
 	| error {
 		$$ = createAstNode("error", DEBUG_AST);
 		insertAstNode(&astList, $$);
@@ -164,29 +171,32 @@ decl:
 
 var_definition:
 	SIMPLE_TYPE ID{
-		char concat_type[200];
-		int var_type = 1;
+		//char concat_type[200];
+		int var_type = 2;	// parameter
 		insertSymbol(&symbolTable, $2.lexeme_string, $1.lexeme_string, var_type, $2.line, $2.column, $2.scope, &semantic_errors);
 		$$ = createAstNode("var definition", 1);
-		strcpy(concat_type, $1.lexeme_string);
-		strcat(concat_type, " ");
-		strcat(concat_type, $2.lexeme_string);
-		$$->token_name = strdup(concat_type);
+		//strcpy(concat_type, $1.lexeme_string);
+		//strcat(concat_type, " ");
+		//strcat(concat_type, $2.lexeme_string);
+		//$$->token_name = strdup(concat_type);
+		$$->token_name = strdup($2.lexeme_string);
+		$$->token_type = strdup($1.lexeme_string);
 		$$->token_line = $2.line;
 		$$->token_column = $2.column;
 		insertAstNode(&astList, $$);
 	}
 	| SIMPLE_TYPE COMPOUND_TYPE ID{
-		char concat_type[200];
-		int var_type = 1;
+		char concat_type[15];
+		int var_type = 2;	// parameter
 		strcpy(concat_type, $1.lexeme_string);
 		strcat(concat_type, " ");
 		strcat(concat_type, $2.lexeme_string);
 		insertSymbol(&symbolTable, $3.lexeme_string, concat_type, var_type, $3.line, $3.column, $3.scope, &semantic_errors);
 		$$ = createAstNode("var definition", 1);
-		strcat(concat_type, " ");
-		strcat(concat_type, $3.lexeme_string);
-		$$->token_name = strdup(concat_type);
+		//strcat(concat_type, " ");
+		//strcat(concat_type, $3.lexeme_string);
+		$$->token_name = strdup($3.lexeme_string);
+		$$->token_type = strdup(concat_type);
 		$$->token_line = $3.line;
 		$$->token_column = $3.column;
 		insertAstNode(&astList, $$);
@@ -195,29 +205,31 @@ var_definition:
 
 var_declaration:
 	SIMPLE_TYPE ID ';'{
-		char concat_type[200];
+		//char concat_type[200];
 		int var_type = 1;
 		insertSymbol(&symbolTable, $2.lexeme_string, $1.lexeme_string, var_type, $2.line, $2.column, $2.scope, &semantic_errors);
 		$$ = createAstNode("var declaration", 1);
-		strcpy(concat_type, $1.lexeme_string);
-		strcat(concat_type, " ");
-		strcat(concat_type, $2.lexeme_string);
-		$$->token_name = strdup(concat_type);
+		//strcpy(concat_type, $1.lexeme_string);
+		//strcat(concat_type, " ");
+		//strcat(concat_type, $2.lexeme_string);
+		$$->token_name = strdup($2.lexeme_string);
+		$$->token_type = strdup($1.lexeme_string);
 		$$->token_line = $2.line;
 		$$->token_column = $2.column;
 		insertAstNode(&astList, $$);
 	}
 	| SIMPLE_TYPE COMPOUND_TYPE ID ';'{
-		char concat_type[200];
+		char concat_type[15];
 		int var_type = 1;
 		strcpy(concat_type, $1.lexeme_string);
 		strcat(concat_type, " ");
 		strcat(concat_type, $2.lexeme_string);
 		insertSymbol(&symbolTable, $3.lexeme_string, concat_type, var_type, $3.line, $3.column, $3.scope, &semantic_errors);
 		$$ = createAstNode("var declaration", 1);
-		strcat(concat_type, " ");
-		strcat(concat_type, $3.lexeme_string);
-		$$->token_name = strdup(concat_type);
+		//strcat(concat_type, " ");
+		//strcat(concat_type, $3.lexeme_string);
+		$$->token_name = strdup($3.lexeme_string);
+		$$->token_type = strdup(concat_type);
 		$$->token_line = $3.line;
 		$$->token_column = $3.column;
 		insertAstNode(&astList, $$);
@@ -254,29 +266,39 @@ params.opt:
 
 func_declaration:
 	SIMPLE_TYPE ID{
-		char concat_type[200];
+		//char concat_type[200];
 		int func_type = 0;
 		insertSymbol(&symbolTable, $2.lexeme_string, $1.lexeme_string, func_type, $2.line, $2.column, $2.scope, &semantic_errors);
 		$$ = createAstNode("function declaration", 1);
-		strcpy(concat_type, $1.lexeme_string);
-		strcat(concat_type, " ");
-		strcat(concat_type, $2.lexeme_string);
-		$$->token_name = strdup(concat_type);
+		//strcpy(concat_type, $1.lexeme_string);
+		//strcat(concat_type, " ");
+		//strcat(concat_type, $2.lexeme_string);
+		$$->token_name = strdup($2.lexeme_string);
+		$$->token_type = strdup($1.lexeme_string);
+		if(strcmp($1.lexeme_string, "int") == 0)
+			check_func_type = 1;
+		else
+			check_func_type = 2;
 		$$->token_line = $2.line;
 		$$->token_column = $2.column;
 		insertAstNode(&astList, $$);
 	}
 	| SIMPLE_TYPE COMPOUND_TYPE ID{
-		char concat_type[200];
+		char concat_type[15];
 		int func_type = 0;
 		strcpy(concat_type, $1.lexeme_string);
 		strcat(concat_type, " ");
 		strcat(concat_type, $2.lexeme_string);
 		insertSymbol(&symbolTable, $3.lexeme_string, concat_type, func_type, $3.line, $3.column, $3.scope, &semantic_errors);
 		$$ = createAstNode("function declaration", 1);
-		strcat(concat_type, " ");
-		strcat(concat_type, $3.lexeme_string);
-		$$->token_name = strdup(concat_type);
+		//strcat(concat_type, " ");
+		//strcat(concat_type, $3.lexeme_string);
+		$$->token_name = strdup($3.lexeme_string);
+		$$->token_type = strdup(concat_type);
+		if(strcmp($1.lexeme_string, "int") == 0)
+			check_func_type = 3;
+		else
+			check_func_type = 4;
 		$$->token_line = $3.line;
 		$$->token_column = $3.column;
 		insertAstNode(&astList, $$);
@@ -307,6 +329,7 @@ param:
 		$$ = createAstNode("param", 1);
 		$$->children[0] = $1;
 		insertAstNode(&astList, $$);
+		setupParameters(&symbolTable);
 	}
 ;
 
@@ -383,15 +406,14 @@ stmt:
 		$$->children[0] = $1;
 		insertAstNode(&astList, $$);
 	}
+	| ';'{
+		$$ = createAstNode("stmt", 1);
+		insertAstNode(&astList, $$);
+	}
 	| stmts{
 		$$ = createAstNode("stmt", 1);
 		$$->children[0] = $1;
 		insertAstNode(&astList, $$);
-	} 
-	| error {
-		$$ = createAstNode("error", DEBUG_AST);
-		insertAstNode(&astList, $$);
-		yyerrok;
 	}
 ;
 
@@ -448,6 +470,7 @@ return_stmt:
 		$$ = createAstNode("return stmt", 1);
 		$$->children[0] = $2;
 		insertAstNode(&astList, $$);
+		//checkType($$, $1.line, $1.column, &semantic_errors);
 	}
 ;
 
@@ -471,11 +494,11 @@ in_stmt:
 		strcpy(id_type, getContext(&symbolTable, &contextList, $3.lexeme_string, $3.line, $3.column, &semantic_errors));
 		$$ = createAstNode("input stmt", 1);
 		strcpy(input_type, $1.lexeme_string);
-		strcat(input_type, " (");
+		strcat(input_type, "(");
 		strcat(input_type, $3.lexeme_string);
 		strcat(input_type, ")");
 		$$->token_name = strdup(input_type);
-		$$->token_type = strdup(id_type);
+		//$$->token_type = strdup(id_type);
 		insertAstNode(&astList, $$);
 	}
 ;
@@ -485,7 +508,7 @@ out_stmt:
 		char output_type[200];
 		$$ = createAstNode("output stmt", 1);
 		strcpy(output_type, $1.lexeme_string);
-		strcat(output_type, " (");
+		strcat(output_type, "(");
 		strcat(output_type, $3.lexeme_string);
 		strcat(output_type, ")");
 		$$->token_name = strdup(output_type);
@@ -495,6 +518,7 @@ out_stmt:
 		char output_type[200];
 		$$ = createAstNode("output stmt", 1);
 		strcpy(output_type, $1.lexeme_string);
+		strcat(output_type, "()");
 		$$->token_name = strdup(output_type);
 		$$->children[0] = $3;
 		insertAstNode(&astList, $$);
@@ -503,26 +527,23 @@ out_stmt:
 
 assign_exp:
 	ID '=' exp{
-		char assign_id[200];
 		char id_type[15];
 		strcpy(id_type, getContext(&symbolTable, &contextList, $1.lexeme_string, $1.line, $1.column, &semantic_errors));
 		$$ = createAstNode("assign exp", 1);
-		strcpy(assign_id, $1.lexeme_string);
-		$$->token_name = strdup(assign_id);
+		$$->token_name = strdup($1.lexeme_string);
 		$$->token_type = strdup(id_type);
 		$$->token_line = $1.line;
 		$$->token_column = $1.column;
 		$$->children[0] = $3;
 		insertAstNode(&astList, $$);
+		//checkType($$, $1.line, $1.column, &semantic_errors);
 	}
 ;
 
 simple_exp:
 	simple_exp LOGICAL_OR and_exp{
-		char operation[200];
 		$$ = createAstNode("simple exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
@@ -541,10 +562,8 @@ simple_exp:
 
 and_exp:
 	and_exp LOGICAL_AND rel_exp{
-		char operation[200];
 		$$ = createAstNode("and exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
@@ -558,10 +577,8 @@ and_exp:
 
 rel_exp:
 	rel_exp RELATIONAL list_exp{
-		char operation[200];
 		$$ = createAstNode("rel exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
@@ -575,19 +592,15 @@ rel_exp:
 
 list_exp:
 	sum_exp LIST_CONSTR list_exp{
-		char operation[200];
 		$$ = createAstNode("list exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
 	}
 	| sum_exp LIST_FUNC list_exp{
-		char operation[200];
 		$$ = createAstNode("list exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
@@ -601,10 +614,8 @@ list_exp:
 
 sum_exp:
 	sum_exp ADD mul_exp{
-		char operation[200];
 		$$ = createAstNode("sum exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
@@ -618,10 +629,8 @@ sum_exp:
 
 mul_exp:
 	mul_exp MUL unary_exp{
-		char operation[200];
 		$$ = createAstNode("mul exp", 1);
-		strcpy(operation, $2.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($2.lexeme_string);
 		$$->children[0] = $1;
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
@@ -640,31 +649,25 @@ unary_exp:
 		insertAstNode(&astList, $$);
 	}
 	| LIST_OP unary_exp{
-		char operation[200];
 		$$ = createAstNode("unary exp", 1);
-		strcpy(operation, $1.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($1.lexeme_string);
 		$$->children[0] = $2;
 		insertAstNode(&astList, $$);
 	}
 	| LIST_DESTR unary_exp{
-		char operation[200];
 		$$ = createAstNode("unary exp", 1);
-		strcpy(operation, $1.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($1.lexeme_string);
 		$$->children[0] = $2;
 		insertAstNode(&astList, $$);
 	}
 	| OP_OVERLOAD unary_exp{
-		char operation[200];
 		$$ = createAstNode("unary exp", 1);
-		strcpy(operation, $1.lexeme_string);
-		$$->token_name = strdup(operation);
+		$$->token_name = strdup($1.lexeme_string);
 		$$->children[0] = $2;
 		insertAstNode(&astList, $$);
 	}
 	| ADD unary_exp{
-		char signal_type[200];
+		char signal_type[100];
 		strcpy(signal_type, "signed unary exp");
 		strcat(signal_type, " (");
 		strcat(signal_type, RED);
@@ -679,12 +682,10 @@ unary_exp:
 
 factor:
 	ID{
-		char id_name[200];
 		char id_type[15];
 		strcpy(id_type, getContext(&symbolTable, &contextList, $1.lexeme_string, $1.line, $1.column, &semantic_errors));
 		$$ = createAstNode("factor exp", 1);
-		strcpy(id_name, $1.lexeme_string);
-		$$->token_name = strdup(id_name);
+		$$->token_name = strdup($1.lexeme_string);
 		$$->token_type = strdup(id_type);
 		$$->token_line = $1.line;
 		$$->token_column = $1.column;
@@ -719,7 +720,22 @@ func_call:
 		strcat(func_id, "()");
 		$$->token_name = strdup(func_id);
 		$$->token_type = strdup(func_type);
+		$$->token_line = $1.line;
+		$$->token_column = $1.column;
 		$$->children[0] = $4;
+		insertAstNode(&astList, $$);
+	}
+	| ID '(' ')'{
+		char func_id[200];
+		char func_type[15];
+		strcpy(func_type, getContext(&symbolTable, &contextList, $1.lexeme_string, $1.line, $1.column, &semantic_errors));
+		$$ = createAstNode("func call", 1);
+		strcpy(func_id, $1.lexeme_string);
+		strcat(func_id, "()");
+		$$->token_name = strdup(func_id);
+		$$->token_type = strdup(func_type);
+		$$->token_line = $1.line;
+		$$->token_column = $1.column;
 		insertAstNode(&astList, $$);
 	}
 ;
@@ -736,36 +752,29 @@ func_params:
 		$$->children[1] = $3;
 		insertAstNode(&astList, $$);
 	}
-	| %empty{
-		$$ = createAstNode("func params empty", DEBUG_AST); 
-		insertAstNode(&astList, $$);
-	}
 ;
 
 constant:
 	INTEGER{
-		char int_type[200];
 		$$ = createAstNode("int constant", 1);
-		strcpy(int_type, $1.lexeme_string);
-		$$->token_name = strdup(int_type);
+		$$->token_name = strdup($1.lexeme_string);
+		$$->token_type = strdup("\0");
 		$$->token_line = $1.line;
 		$$->token_column = $1.column;
 		insertAstNode(&astList, $$);
 	}
 	| REAL{
-		char real_type[200];
 		$$ = createAstNode("real constant", 1);
-		strcpy(real_type, $1.lexeme_string);
-		$$->token_name = strdup(real_type);
+		$$->token_name = strdup($1.lexeme_string);
+		$$->token_type = strdup("\0");
 		$$->token_line = $1.line;
 		$$->token_column = $1.column;
 		insertAstNode(&astList, $$);
 	}
 	| NIL_CONSTANT{
-		char nil_type[200];
 		$$ = createAstNode("nil constant", 1);
-		strcpy(nil_type, $1.lexeme_string);
-		$$->token_name = strdup(nil_type);
+		$$->token_name = strdup($1.lexeme_string);
+		$$->token_type = strdup("\0");
 		$$->token_line = $1.line;
 		$$->token_column = $1.column;
 		insertAstNode(&astList, $$);
@@ -806,25 +815,26 @@ int main(int argc, char *argv[]){
 
 	if(syntax_errors == 0 && semantic_errors == 0)
 		printAST(&root);
-
-	if(syntax_errors == 0){
-		printf("\n%sSyntax analysis finished without errors.%s\n", GREEN, WHITE);
-	}else{
-		printf("%s~ AST tree will not be printed, due to syntax or semantic errors.%s\n", RED, WHITE);
-		printf("%sSyntax analysis finished with %d errors.%s\n", RED, syntax_errors, WHITE);
-	}
+	else
+		printf("%s~> AST tree will not be printed, due to syntax or semantic error(s).%s\n", RED, WHITE);
 
 	printTable(&symbolTable);
 
-	if(semantic_errors == 0)
-		printf("%sSemantic analysis finished without errors.%s\n", GREEN, WHITE);
+	if(syntax_errors == 0)
+		printf("\n%sSyntax analysis finished without error(s).%s\n", GREEN, WHITE);
 	else
-		printf("%sSemantic analysis finished with %d errors.%s\n", RED, semantic_errors, WHITE);
+		printf("%sSyntax analysis finished with %d error(s).%s\n", RED, syntax_errors, WHITE);
+
+	if(semantic_errors == 0)
+		printf("%sSemantic analysis finished without error(s).%s\n", GREEN, WHITE);
+	else
+		printf("%sSemantic analysis finished with %d error(s).%s\n", RED, semantic_errors, WHITE);
+
+	printParams(&symbolTable);
 
 	freeNode(&root);
 	freeSymbols(&symbolTable);
 	freeContextList(&contextList);
 	yylex_destroy();
-
 	return 0;
 }

@@ -14,6 +14,9 @@ Ast root;
 AstList astList;
 Table symbolTable;
 Context contextList;
+ParameterList parameterList;
+extern int check_func_type;
+
 /* SYMBOL TABLE */
 
 int isOnTable(Table *t, char *name, int scope){
@@ -27,18 +30,19 @@ int isOnTable(Table *t, char *name, int scope){
     return 0;
 }
 
-void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope, int *errors){
+void insertSymbol(Table *t, char *name, char *type, int decl_type, int line, int column, int scope, int *error){
+    int i;
     if(isOnTable(t, name, scope)){
-        printf("%sLine:%d\tColumn:%d\tSemantic error! Redeclaration of variable %s%s%s in the same scope.%s\n", RED, line, column, PURPLE, name, RED, WHITE);
-        *errors+= 1;
-        //return;
+        printf("%sLine:%d\tColumn:%d\tSemantic error! Redeclaration of %s%s%s in the same scope.%s\n", RED, line, column, PURPLE, name, RED, WHITE);
+        *error+= 1;
+        //return;   -> Comment to show the replicated variable in the symbol table.
     }
 
     Symbol *new_symbol = (Symbol*)malloc(sizeof(Symbol));
-    //new_symbol->name = strdup(name);
-    strcpy(new_symbol->name, name);
-    //new_symbol->type = strdup(type);
-    strcpy(new_symbol->type, type);
+    new_symbol->name = strdup(name);
+    new_symbol->type = strdup(type);
+    new_symbol->param_list = NULL;
+    new_symbol->param_qtd = 0;
     new_symbol->decl_type = decl_type;
     new_symbol->line = line;
     new_symbol->column = column;
@@ -56,30 +60,38 @@ void freeSymbols(Table *t){
     while(t->first != NULL){
         Symbol *removed = t->first;
         t->first = t->first->prox;
-        //if(removed->name != NULL)
-        //    free(removed->name);
-        //else if(removed->type != NULL)
-        //    free(removed->type);
+        free(removed->name);
+        free(removed->type);
+        if(removed->param_list != NULL){
+            freeParamList(removed->param_list);
+        }
         free(removed);
     }
     t->last = NULL;
 }
 
 void printTable(Table *t){
-    printf("\n\t\t\t\t\t\t%sSymbol Table%s\n", GREEN, WHITE);
-    printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
-    printf("| %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s |\n", RED ,"Name", WHITE, 
-    RED, "Type", WHITE, RED, "Declaration Type", WHITE, RED, "Line", WHITE, RED, "Column", WHITE, RED, "Scope", WHITE);
-    printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
+    printf("\n\t\t\t\t\t\t\t\t\t%sSymbol Table%s\n", GREEN, WHITE);
+    printf(" ---------------------------------------------------------------------------------------------------------------------------------------------------------------- \n");
+    printf("| %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s | %s%-20s%s |\n", RED ,"Name", WHITE, 
+    RED, "Type", WHITE, RED, "Declaration Type", WHITE, RED, "Num. Parameters", WHITE, RED, "Line", WHITE, RED, "Column", WHITE, RED, "Scope", WHITE);
+    printf(" ---------------------------------------------------------------------------------------------------------------------------------------------------------------- \n");
     Symbol *actual = t->first;
     while(actual != NULL){
-        if(actual->decl_type)
-            printf("| %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "variable", actual->line, actual->column, actual->scope);
-        else
-            printf("| %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "function", actual->line, actual->column, actual->scope);
+        switch(actual->decl_type){
+            case 0: // function
+                printf("| %-20s | %-20s | %-20s | %-20d | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "function", actual->param_qtd, actual->line, actual->column, actual->scope);
+                break;
+            case 1: // variable
+                printf("| %-20s | %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "variable", "-", actual->line, actual->column, actual->scope);
+                break;
+            case 2: // parameter
+                printf("| %-20s | %-20s | %-20s | %-20s | %-20d | %-20d | %-20d |\n", actual->name, actual->type, "parameter", "-", actual->line, actual->column, actual->scope);
+                break;
+        }
         actual = actual->prox;
     }
-    printf(" ----------------------------------------------------------------------------------------------------------------------------------------- \n");
+    printf(" ---------------------------------------------------------------------------------------------------------------------------------------------------------------- \n");
 }
 
 int hasMainFunction(Table *t){
@@ -106,13 +118,12 @@ AstList *createAstList(){
 Ast *createAstNode(char *name, int printable){
     Ast *new_ast_node = (Ast*)malloc(sizeof(Ast));
     new_ast_node->node_name = strdup(name);
-    //strcpy(new_ast_node->node_name, name);
+    new_ast_node->node_type = NULL;
+    new_ast_node->node_transform = NULL;
     new_ast_node->token_name = NULL;
     new_ast_node->token_type = NULL;
     new_ast_node->printable = printable;
     new_ast_node->token_line = new_ast_node->token_column = -1;
-    //new_ast_node->has_token = 0;
-    //strcpy(ast->node_name, name);
     new_ast_node->children[0] = NULL;
     new_ast_node->children[1] = NULL;
     new_ast_node->children[2] = NULL;
@@ -130,25 +141,26 @@ void insertAstNode(AstList *t, Ast *n){
 
 void freeNode(Ast *n){
     int i;
-    if(n == NULL){
+    if(n == NULL)
         return;
-    }
 
-    for(i = 0; i < MAX_CHILDREN; i++){
+    for(i = 0; i < MAX_CHILDREN; i++)
         freeNode(n->children[i]);
-    }
 
-    if(n->node_name != NULL){
+    if(n->node_name != NULL)
         free(n->node_name);
-    }
 
-    if(n->token_name != NULL){
+    if(n->node_type != NULL)
+        free(n->node_type);
+
+    if(n->node_transform != NULL)
+        free(n->node_transform);
+
+    if(n->token_name != NULL)
         free(n->token_name);
-    }
 
-    if(n->token_type != NULL){
+    if(n->token_type != NULL)
         free(n->token_type);
-    }
     
     if(n->prox != NULL)
         free(n->prox);
@@ -164,7 +176,6 @@ void printAstList(AstList *t){
         printf("\n");
         actual = actual->prox;
     }
-    free(actual);
 }
 
 void printAST(Ast *root){
@@ -175,9 +186,8 @@ void printAST(Ast *root){
 void printNode(Ast *n, int index){
     int i, spaces = 0;
 
-    if(n == NULL){
+    if(n == NULL)
         return;
-    }
 
     if(n->printable){
         for(i = 0; i < index; i++){
@@ -197,22 +207,13 @@ void printNode(Ast *n, int index){
         }
     }
 
-    if(n->token_name && n->token_line != -1){
+    if(n->token_type && strcmp(n->token_name, "var definition") != 0){
         for(i = 0; i < spaces+3; i++){
             printf(" ");
         }
-        printf(" %s├─%s %s %s[%d:%d] %s\n", RED, WHITE, n->token_name, PURPLE, n->token_line, n->token_column, WHITE);
+        printf(" %s├─%s %s %s %s[%d:%d] %s\n", RED, WHITE, n->token_type, n->token_name, PURPLE, n->token_line, n->token_column, WHITE);
     }
 }
-/*
-void checkType(Ast *n, int *error){
-    if(strcmp(n->token_name, "return stmt") == 0){
-        strcpy(n->token_type,);
-    }else if(strcmp(n->token_name, "assign exp") == 0){
-
-    }
-        
-}*/
 
 /* SCOPE */
 
@@ -226,18 +227,14 @@ void insertScope(int value, Context *c){
     }
 }
 
-int removeScope(Context *c){
-    if(c->first == NULL){
-        return -1;
-    }
-    int tmp = c->first->value;
+void removeScope(Context *c){
+    if(c->first == NULL)
+        return;
     Scope *removed = c->first;
     c->first = c->first->prox;
     free(removed);
-    if(c->first == NULL){
+    if(c->first == NULL)
         c->last = NULL;
-    }     
-    return tmp;
 }
 
 void setupContext(Context *c){
@@ -247,6 +244,77 @@ void setupContext(Context *c){
 void freeContextList(Context *c){
     while(c->first != NULL){
         removeScope(c);
+    }
+}
+
+/* Parameter list */
+
+ParameterList *createParameterList(){
+    ParameterList *parameter_list = (ParameterList*)malloc(sizeof(ParameterList));
+    parameter_list->first = NULL;
+    parameter_list->last = NULL;
+    return parameter_list;
+}
+
+void insertParam(char *param_type, ParameterList *p){
+   Parameter * new_parameter = (Parameter *)malloc(sizeof(Parameter));
+   //new_parameter->param_type = strdup(param_type);
+   strcpy(new_parameter->param_type, param_type);
+   new_parameter->prox = NULL;
+   if(p->first == NULL){
+      p->first = new_parameter;
+   }else{
+      p->last->prox = new_parameter;
+   }
+   p->last = new_parameter;
+}
+
+void freeParamList(ParameterList *p){
+    Parameter *actual;
+    while(p->first != NULL){
+        actual = p->first;
+        p->first = p->first->prox;
+        free(actual);
+    }
+    p->last = NULL;
+}
+
+void setupParameters(Table *t){
+    Symbol *actual = t->first;
+    Symbol *function;
+    ParameterList *param_start;
+
+    while(actual != NULL){
+        if(actual->decl_type == 0){  // Function
+            actual->param_qtd = 0;
+            actual->param_list = createParameterList();
+            function = actual;
+            param_start = actual->param_list;
+        }else if(actual->decl_type == 2){    // Parameter
+            function->param_qtd+= 1;
+            insertParam(actual->type, param_start);
+        }
+        actual = actual->prox;
+    }
+}
+
+void printParamList(ParameterList *p){
+    Parameter *actual = p->first;
+    while(actual != NULL){
+        printf("%s, ", actual->param_type);
+        actual = actual->prox;
+    }
+    printf("\n");
+}
+
+void printParams(Table *t){
+    Symbol *actual = t->first;
+    while(actual != NULL){
+        if(actual->param_list){
+            printf("%s -> ", actual->name);
+            printParamList(actual->param_list);
+        }
+        actual = actual->prox;
     }
 }
 
@@ -272,9 +340,94 @@ char *getContext(Table *t, Context *c, char *name, int line, int column, int *er
         actual = actual->prox;
     }
 
-    printf("%sLine:%d\tColumn:%d\tSemantic error! Variable %s%s%s was not declared in this scope.%s\n", 
+    printf("%sLine:%d\tColumn:%d\tSemantic error! %s%s%s was not declared in this scope.%s\n", 
 	RED, line, column, PURPLE, name, RED, WHITE);
     *error+= 1;
 
     return "error";
 }
+
+/*
+void checkType(Ast *n, int line, int column, int *error){
+    int alt = 0;    // 1 = return, 2 = assignment
+    char func_type[15];
+    if(strcmp(n->node_name, "return stmt") == 0){
+        alt = 1;
+    }else if(strcmp(n->node_name, "assign exp") == 0){
+        alt = 2;
+    }
+
+    switch(check_func_type){
+        case 1:
+            strcpy(func_type, "int");
+            break;
+        case 2:
+            strcpy(func_type, "float");
+            break;
+        case 3:
+            strcpy(func_type, "int list");
+            break;
+        case 4:
+            strcpy(func_type, "float list");
+            break;
+    }
+
+    // check_func_type -> 1 = int, 2 = float, 3 = int list, 4 = float list
+    switch(alt){
+        case 1:
+            n->node_type = strdup(func_type);
+            printf("%s ", n->node_type);
+            printf("%s ", n->node_name);
+            //printf("%s ", n->children[0]->node_type);
+                if (!((check_func_type > 2
+                && (!strcmp(n->children[0]->node_type, "int") || !strcmp(n->children[0]->node_type, "float")))
+                || ((!strcmp(func_type, "int") || !strcmp(func_type, "float"))
+                    && check_func_type > 2))) {
+                strcpy(n->children[0]->node_transform, n->node_type);
+            }
+            else {
+                printf("%sLine:%d\tColumn:%d\tSemantic error! Type %s%s%s unexpected in return of function.%s\n", RED, line, column, PURPLE, "tipo", RED, WHITE);
+                *error+= 1;
+            }
+            break;
+        case 2:
+            break;
+    }
+}
+
+
+char *typeDiff(Ast *l, Ast *r){
+    // 1 = int, 2 = float, 3 = int list, 4 = float list
+    int l_type = 0;
+    int r_type = 0;
+
+    if(strcmp(l->node_type, "int") == 0){
+        l_type = 1;
+    }else if(strcmp(l->node_type, "float") == 0){
+        l_type = 2;
+    }else if(strcmp(l->node_type, "int list") == 0){
+        l_type = 3;
+    }else if(strcmp(l->node_type, "float list") == 0){
+        l_type = 4;
+    }
+    
+    if(strcmp(l->node_type, r->node_type) == 0)
+        return l->node_type;
+    else if(strcmp(l->node_type, r->node_type) == 0){
+
+    }
+}
+
+void verifyExpressionType(Ast *n){
+    if(n == NULL)
+        return; //recursivity
+
+    char *left_children;
+    char *right_children;
+
+    if(strcmp(n->node_name, "func params")){
+        if(left_children == NULL && right_children == NULL){
+            n->
+        }
+    }
+}*/
