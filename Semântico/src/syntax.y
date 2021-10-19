@@ -1178,7 +1178,7 @@ int main(int argc, char *argv[]){
 
 	freeNode(&root);
 	freeSymbols(&symbolTable);
-	freeContextList(&contextList);
+	freeContextList(&contextList);			// avoid mem leak caused by scope semantic errors.
 	freeParameterTypeList(&parameterTypeList);	// avoid mem leak caused by func params semantic errors.
 
 	if(!error_comm)
