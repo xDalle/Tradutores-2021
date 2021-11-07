@@ -10,8 +10,11 @@ Ademais, pode-se compilar e executar o valgrind em algum dos arquivos de
 teste:
 
 correct1.c -> $ make valgrind1
+
 correct2.c -> $ make valgrind2
+
 incorrect1.c -> $ make valgrind3
+
 incorrect2.c -> $ make valgrind4
 
 Caso seja de seu interesse compilá-lo manualmente, execute a sequência de instruções:
