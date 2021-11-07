@@ -1,30 +1,39 @@
 Autor: Lucas Dalle Rocha
-Matrícula: 17/0016641
+MatrÃ­cula: 17/0016641
 
-O programa pode ser compilado pela utilização do Makefile, 
-com o seguinte comando em seu terminal: 
-$ make
+O programa pode ser compilado pela utilizaÃ§Ã£o do Makefile, 
+com o seguinte comando em seu terminal:
+
+	$ make
 
 Ademais, pode-se compilar e executar algum dos arquivos de
 teste:
+
 correct1.c -> $ make correct1
+
 correct2.c -> $ make correct2
+
 incorrect1.c -> $ make incorrect1
+
 incorrect2.c -> $ make incorrect2
+
 incorrect_extra.c -> make incorrect_extra
+
 correct1.c & correct2.c (c/ Valgrind) -> $ make valgrind
 
-Caso seja de seu interesse compilá-lo manualmente, execute a sequência de instruções:
+Caso seja de seu interesse compilÃ¡-lo manualmente, execute a sequÃªncia de instruÃ§Ãµes:
+
 	$ bison -o src/syntax.tab.c -d src/syntax.y
 	$ flex -o src/lex.yy.c src/lexical.l
 	$ gcc-11 -g -c src/structures.c -o obj/structures.o
 	$ gcc-11 -g src/syntax.tab.c src/lex.yy.c obj/structures.o -I lib -o tradutor -Wall -Wpedantic
 
-Por fim, para execução do analisador semântico nos arquivos teste:
-$ ./tradutor tests/<file>.c
-$ ./<path_to_tac_file>/tac <path_to_file>/<file>.tac>
+Por fim, para execuÃ§Ã£o do analisador semÃ¢ntico nos arquivos teste:
 
-Definições:
+	$ ./tradutor tests/<file>.c
+	$ ./<path_to_tac_file>/tac <path_to_file>/<file>.tac>
+
+DefiniÃ§Ãµes:
 
 * Kernel: 4.4.0-19041-Microsoft <WSL Terminal>
 * Ubuntu 20.04.2 LTS
