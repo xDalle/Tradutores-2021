@@ -4,7 +4,7 @@ Matrícula: 17/0016641
 O programa pode ser compilado pela utilização do Makefile, 
 com o seguinte comando em seu terminal: 
 
-$ make
+	$ make
 
 Ademais, pode-se compilar e executar o valgrind em algum dos arquivos de
 teste:
@@ -29,7 +29,7 @@ Caso seja de seu interesse compilá-lo manualmente, execute a sequência de inst
 
 Por fim, para execução do analisador sintático nos arquivos teste:
 
-$ ./tradutor tests/<file>.c
+	$ ./tradutor tests/<file>.c
 
 Definições:
 
