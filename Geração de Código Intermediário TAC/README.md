@@ -31,7 +31,7 @@ Caso seja de seu interesse compilá-lo manualmente, execute a sequência de inst
 Por fim, para execução do analisador semântico nos arquivos teste:
 
 	$ ./tradutor tests/<file>.c
-	$ ./<path_to_tac_file>/tac <path_to_file>/<file>.tac>
+	$ ./<path_to_tac_file>/tac <path_to_file>/<file>.tac
 
 Definições:
 
